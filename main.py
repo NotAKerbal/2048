@@ -1,11 +1,11 @@
 import pygame
 import math
 import random
+import os
 import platform
-if platform.system() == "Windows":
-    import win32gui
-    import win32con
-
+import tkinter
+import customtkinter
+import screeninfo
 ##AI FUNCTIONS
 
 name = "2048 AI Version"
@@ -33,48 +33,20 @@ colorList = [background,
              (66, 212, 244),
              (67, 99, 216),
              (67, 99, 216)]
-tColorList = [(0,0,0),
-              (255,255,255),
-              (255,255,255),
-              (255,255,255),
-              (255,255,255),
-              (255,255,255),
-              (255,255,255),
-              (255,255,255),
-              (255,255,255),
-              (255,255,255),
-              (255,255,255),
-              (255,255,255)]
-
 
 ##Game Settings
-startX = 10
-startY = 50
 sizeBox = 160
 spaceBox = 2
 numBoxesX = 4
 numBoxesY = 4
-waterfall = False
 advancedRandom = False
-
-class bcolors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKCYAN = '\033[96m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-LINE_UP = '\033[1A'
-LINE_CLEAR = '\x1b[2K'
+aiOption = "None"
 
 ## Important Variables
-endOfGameX = startX + numBoxesX * (spaceBox + sizeBox)
-endOfGameY = startY + numBoxesY * (spaceBox + sizeBox)
+endOfGameX = 10 + numBoxesX * (spaceBox + sizeBox)
+endOfGameY = 10 + numBoxesY * (spaceBox + sizeBox)
 maxScore = 0
-bottomOfHeader = startY
+bottomOfHeader = 10
 fullscreen = False
 ai = False
 victory = False
@@ -93,12 +65,10 @@ for i in range(numBoxesY-1):
     valList.append(arr)
 
 ## -------- DISPLAY FUNCTIONS -------- 
-
+    
 ##Initialize Pygame
 pygame.init()
 gameDisplay = pygame.display.set_mode((resX,resY), pygame.RESIZABLE)
-if platform.system() == "Windows":
-   window = win32gui.GetForegroundWindow()
 pygame.display.set_caption(name)
 font = pygame.font.Font('freesansbold.ttf', 15)
 font2 = pygame.font.Font('freesansbold.ttf', int(sizeBox/2-5))
@@ -108,54 +78,41 @@ clock = pygame.time.Clock()
 def initPyGame():
     pygame.init()
     global gameDisplay, endOfGameX, endOfGameY, font, font2, clock
-    endOfGameX = startX + numBoxesX * (spaceBox + sizeBox)
-    endOfGameY = startY + numBoxesY * (spaceBox + sizeBox)
+    endOfGameX = 10 + numBoxesX * (spaceBox + sizeBox)
+    endOfGameY = 10 + numBoxesY * (spaceBox + sizeBox)
     resizeDisplay()
     pygame.display.set_caption(name)
-    font = pygame.font.Font('freesansbold.ttf', 15)
     font2 = pygame.font.Font('freesansbold.ttf', int(sizeBox/2-5))
     clock = pygame.time.Clock()
-    initDisplay()
+    gameDisplay.fill(background)
+    renderGame()
 
 def resizeDisplay():
     if not fullscreen:
         global endOfGameX, endOfGameY, resX, resY
-        endOfGameX = startX + numBoxesX * (spaceBox + sizeBox)
-        endOfGameY = startY + numBoxesY * (spaceBox + sizeBox)
+        endOfGameX = 10 + numBoxesX * (spaceBox + sizeBox)
+        endOfGameY = 10 + numBoxesY * (spaceBox + sizeBox)
         resX = endOfGameX + 10
         resY = endOfGameY + 10
         pygame.display.set_mode((resX,resY),pygame.RESIZABLE)
 
 crashed = False
-def initDisplay():
-    ## Header
-    if platform.system() == "Windows":
-        global window
-        win32gui.ShowWindow(window, win32con.SW_SHOWNOACTIVATE)
-        win32gui.BringWindowToTop(window)
-    gameDisplay.fill(background)
-    pygame.draw.rect(gameDisplay,primary,pygame.Rect(10,10,resX - 20, 30), border_radius=10)
-    text = font.render(name, True, background, primary)
-    textRect = text.get_rect()
-    pygame.draw.rect(gameDisplay,background,pygame.Rect(startX,startY,endOfGameX-startX, endOfGameY-startY), border_radius=10)
- 
-    textRect.center = (resX // 2, 25)
-    gameDisplay.blit(text, textRect)
-    renderGame()
 
 def drawBox(num,x,y):
-    spacing = sizeBox + spaceBox
+    global spacing
     colNum = num % 12
     color = colorList[colNum]
-    pygame.draw.rect(gameDisplay,color,pygame.Rect(startX+x*spacing,startY+y*spacing,sizeBox,sizeBox),border_radius=round(sizeBox/16))
+    pygame.draw.rect(gameDisplay,color,pygame.Rect(10+x*spacing,10+y*spacing,sizeBox,sizeBox),border_radius=round(sizeBox/16))
     if num > 0 and sizeBox > 40:
-        text = font2.render(str(round(math.pow(2,num))), True, tColorList[colNum])
+        text = font2.render(str(round(math.pow(2,num))), True, (255,255,255))
         textRect = text.get_rect()
-        textRect.center = (startX+x*spacing+sizeBox/2, startY+y*spacing+sizeBox/2)
+        textRect.center = (10+x*spacing+sizeBox/2, 10+y*spacing+sizeBox/2)
         gameDisplay.blit(text, textRect)
 
 
 def renderGame():
+    gameDisplay.fill(background)
+    global spacing
     spacing = sizeBox + spaceBox
     ## Draw Background Rectangles
     for x in range(numBoxesX):
@@ -194,133 +151,172 @@ def expandArray():
             for i in range(deficitX):
                 valList[y].append(0)
 
-def settingConfig():
-    quitSet = False
-    noPress = False
-    pygame.display.iconify()
-    global sizeBox, numBoxesX, numBoxesY, advancedRandom, waterfall, loopBack, startX, startY
-    print(bcolors.HEADER + "Please select the setting you'd like to change: ") 
-    print(bcolors.OKBLUE + " 1 - Box Size ") 
-    print(bcolors.OKBLUE + " 2 - # of Columns ") 
-    print(bcolors.OKBLUE + " 3 - # of Rows")
-    print(bcolors.OKBLUE + " 4 - Max Out Display")  
-    print(bcolors.OKBLUE + " 5 - Advanced Random ") 
-    print(bcolors.OKBLUE + " 6 - Waterfall Simulator ") 
-    print(bcolors.OKBLUE + " 7 - Loop Back Mode ") 
-    print() 
-    print(bcolors.OKBLUE + " A - AI Gesture Mode (Erases Data)") 
-    print() 
-    print(bcolors.OKGREEN + " H - Help ") 
-    print(bcolors.WARNING + " R - Reset to Defaults")
-    print(bcolors.FAIL + " Q - Quit and Save")
-    while not quitSet:
-        c = input(bcolors.OKCYAN + "\nPlease enter a command: ")
-        if c == "1":
-            global font2
-            inputStr = input("What would you like to change the box size to? (Default: 80): ")
-            if inputStr.isdigit():
-                sizeBox = int(inputStr)
-            else:
-                print(bcolors.WARNING + "Keeping Current Values")
-            font2 = pygame.font.Font('freesansbold.ttf', int(sizeBox/2-5))
-        elif c == "2":
-            inputStr = input("What would you like to change the # of Columns too? (Defualt: 4) ")
-            if inputStr.isdigit():
-                numBoxesX = int(inputStr)
-            else:
-                print(bcolors.WARNING + "Keeping Current Values")
+
+class Settings(customtkinter.CTk):
+    def __init__(self):
+        super().__init__()
+        
+        global sizeBox, numBoxesX, numBoxesY, advancedRandom, loopBack, aiOption
+        self.geometry("840x800")
+        self.title("Settings")
+        self.minsize(300, 200)
+        self.font = customtkinter.CTkFont(family="roboto",size=32)
+
+        self.bSFrame = customtkinter.CTkFrame(master=self )
+        self.bSFrame.grid(row=1, column=0, padx=20, pady=20, sticky="nsew")
+        self.bSFrame.sizingLabel = customtkinter.CTkLabel(self.bSFrame, text="Sizing Controls",font=self.font)
+        self.bSFrame.sizingLabel.grid(row=0,column=0,columnspan = 2,pady=20)
+        # Box Size
+        self.bSFrame.boxSizeLabel = customtkinter.CTkLabel(self.bSFrame, text="Box Size: " + str(sizeBox), fg_color="transparent",font=self.font)
+        self.bSFrame.boxSizeLabel.grid(row=1, column=0,sticky="w",padx=20)
+
+       
+        def update_box_size(value):
+            global sizeBox
+            sizeBox = round(value/10)*10
+            self.bSFrame.boxSizeLabel.configure(text="Box Size: " + str(sizeBox))
+            self.bSFrame.boxSizeSlider.set(sizeBox)
+        
+        self.bSFrame.boxSizeSlider = customtkinter.CTkSlider(self.bSFrame, from_=10, to=200, command=update_box_size,height=32,width=360)
+        self.bSFrame.boxSizeSlider.grid(row=1, column=1,sticky="e",padx=20,pady=20)
+
+        #X Value
+        self.bSFrame.xLabel = customtkinter.CTkLabel(self.bSFrame, text="Number of Columns: " + str(numBoxesX), fg_color="transparent",font=self.font)
+        self.bSFrame.xLabel.grid(row=2, column=0,sticky="w",padx=20,pady=20)
+
+        def update_x(value):
+            global numBoxesX
+            numBoxesX = round(value)
+            self.bSFrame.xLabel.configure(text="Number of Columns: " + str(numBoxesX))
+            self.bSFrame.xSlider.set(numBoxesX)
+        
+        self.bSFrame.xSlider = customtkinter.CTkSlider(self.bSFrame, from_=1, to=100, command=update_x,height=32,width=360)
+        self.bSFrame.xSlider.grid(row=2, column=1,sticky="e",padx=20,pady=20)
+
+        #Y Value
+        self.bSFrame.yLabel = customtkinter.CTkLabel(self.bSFrame, text="Number of Rows: " + str(numBoxesY), fg_color="transparent",font=self.font)
+        self.bSFrame.yLabel.grid(row=3, column=0, padx=20, pady=20, sticky="w")
+
+        def update_y(value):
+            global numBoxesY
+            numBoxesY = round(value)
+            self.bSFrame.yLabel.configure(text="Number of Rows: " + str(numBoxesY))
+            self.bSFrame.ySlider.set(numBoxesY)
+        
+
+        self.bSFrame.ySlider = customtkinter.CTkSlider(self.bSFrame, from_=1, to=100, command=update_y,height=32,width=360)
+        self.bSFrame.ySlider.grid(row=3, column=1)
+
+        #autofit Screen
+        def autofit_screen_event():
+            monitor_info = screeninfo.get_monitors()
+            monitor = 0
+            if not len(monitor_info) == 1:
+                monitor = -1
+            global numBoxesX, numBoxesY, sizeBox, spaceBox
+            update_x(math.floor((monitor_info[monitor].width - (10)) / (sizeBox + spaceBox)))
+            update_y(math.floor((monitor_info[monitor].height - (10)) / (sizeBox + spaceBox)))
             expandArray()
-        elif c == "3":
-            inputStr = input("What would you like to change the # of Rows too? (Defualt: 4): ")
-            if inputStr.isdigit():
-                numBoxesY = int(inputStr)
-            else:
-                print(bcolors.WARNING + "Keeping Current Values")
-            expandArray()
-        elif c == "4":
-            inputStr = input("What is your monitor's Width?: ")
-            if inputStr.isdigit():
-                numBoxesX = math.floor((int(inputStr) - (startX)) / (sizeBox + spaceBox))
-            else:
-                print(bcolors.WARNING + "Keeping Current Values for width")
-            expandArray()
-            inputStr = input("What is your monitor's Height?: ")
-            if inputStr.isdigit():
-                numBoxesY = math.floor((int(inputStr) - (startY)) / (sizeBox + spaceBox))
-                print("Your Display is (", numBoxesX, ",", numBoxesY, ") Boxes")
-            else:
-                print(bcolors.WARNING + "Keeping Current Values for height")
-            expandArray()
-        elif c == "5":
-            val = input("Would you like to use advanced random? It allows you to get more than just 2's and 4's. \n(Current Value is: " + str(advancedRandom) + ", default is: False) [y/n] ")
-            if val.lower() == "y":
-                advancedRandom = True
-            elif val.lower() == "n":
-                advancedRandom = False
-            else:
-                print(bcolors.WARNING + "Keeping Current Values")
-        elif c == "6":
-            val = input("Would you like to use waterfall mode? This mode causes the computer to automatically press down as fast as possible to create a waterfall effect. \n(Current Value is: " + str(waterfall) + ", default is: False) [y/n] ")
-            if val.lower() == "y":
-                waterfall = True
-            elif val.lower() == "n":
-                waterfall = False
-            else:
-                print("Keeping Current Values")
-        elif c == "7":
-            val = input("Would you like to use loop back mode? This mode causes the board to loop around, defeating the corner strategy \n(Current Value is: " + str(loopBack) + ", default is: False) [y/n] ")
-            if val.lower() == "y":
-                loopBack = True
-            elif val.lower() == "n":
-                loopBack = False
-            else:
-                print(bcolors.OKBLUE + "Keeping Current Values")
-        elif c.lower() == "a":
-            global ai
-            if ai:
-                print("Ai Features deactivated")
-                ai = False
-            else:
-                print(f"\033[93mGesture Mode Activated - Relaunching (Warning: Settings will be Reset)")
-                print(f"\033[94m")
-                ai = True
-                pygame.quit()
-                import gestures
-        elif c.lower() == "h":
-            print(bcolors.HEADER + "Please select the setting you'd like to change: ") 
-            print(bcolors.OKBLUE + " 1 - Box Size ") 
-            print(bcolors.OKBLUE + " 2 - # of Columns ") 
-            print(bcolors.OKBLUE + " 3 - # of Rows") 
-            print(bcolors.OKBLUE + " 4 - Advanced Random ") 
-            print(bcolors.OKBLUE + " 5 - Waterfall Simulator ") 
-            print(bcolors.OKBLUE + " 6 - Loop Back Mode ") 
-            print() 
-            print(bcolors.WARNING + " A - AI Gesture Mode (Erases Data)") 
-            print() 
-            print(bcolors.OKGREEN + " H - Help ") 
-            print(bcolors.WARNING + " R - Reset to Defaults")
-            print(bcolors.FAIL + " Q - Quit and Save")
-        elif c.lower() == "r":
-            print(bcolors.OKBLUE + "\nResetting Values to Default")
+            
+
+        
+        self.autofitButton = customtkinter.CTkButton(self.bSFrame,text="Autofit Screen",command=autofit_screen_event, font=self.font)
+        self.autofitButton.grid(row=4,column=0,sticky="w",padx=20, pady=20)
+
+        #Random Modes
+        self.rFrame = customtkinter.CTkFrame(master=self, width=760, height=200)
+        self.rFrame.grid(row=3, column=0, padx=20, pady=20, sticky="nsew")
+
+        self.rFrame.labelRandom = customtkinter.CTkLabel(self.rFrame, text="Random Settings",fg_color="transparent",font=self.font,width=800)
+        self.rFrame.labelRandom.grid(row=0,column=0,sticky="ew",pady=20)
+        def ai_options_callback(value):
+            print("segmented button clicked:", value)
+
+        segemented_button_var = customtkinter.StringVar(value="Normal")
+        self.segemented_button = customtkinter.CTkSegmentedButton(self, values=["Normal", "Hard", "Insane"],
+                                                     command=ai_options_callback,
+                                                     variable=segemented_button_var)
+
+        self.oFrame = customtkinter.CTkFrame(master=self, width=760, height=200)
+        self.oFrame.grid(row=4, column=0, padx=20, pady=20, sticky="nsew")
+
+        #Loop Back
+        def switch_loopback():
+            global loopBack
+            loopBack = switch_var_loopBack.get()
+
+        switch_var_loopBack = customtkinter.BooleanVar(value=False)
+        self.switchLoopBack = customtkinter.CTkSwitch(self.oFrame, text="Loopback Mode (Beta)", command=switch_loopback,variable=switch_var_loopBack, onvalue=True, offvalue=False,font=self.font,height=32)
+        self.switchLoopBack.grid(row=0,column=0,pady=20,padx=20)
+
+        self.aFrame = customtkinter.CTkFrame(master=self, width=760, height=200)
+        self.aFrame.grid(row=5, column=0, padx=20, pady=20, sticky="nsew")
+
+        self.aiOptionsLabel = customtkinter.CTkLabel(master=self.aFrame,text="AI Options",font=self.font)
+        self.aiOptionsLabel.grid(row=0,column=0,padx=20,pady=20)
+
+        def ai_options_callback(value):
+            global aiOption
+            aiOption = value
+        self.aiOptions = customtkinter.CTkSegmentedButton(self.aFrame, values=["None", "Waterfall", "Smart"],command=ai_options_callback, font=self.font)
+        self.aiOptions.grid(row=0,column=1,padx=20,pady=20)
+
+        #AI Mode
+        def ai_button_event():
+            pygame.quit()
+            self.destroy()
+            os.system("python gestures.py")
+
+        self.uFrame = customtkinter.CTkFrame(master=self, width=760, height=200)
+        self.uFrame.grid(row=6, column=0, padx=20, pady=20, sticky="nsew")
+
+        self.aiButton = customtkinter.CTkButton(self.uFrame, text="Gesture Mode", command=ai_button_event, font=self.font)
+        self.aiButton.grid(row=0,column=0,sticky="w",padx=20, pady=20)
+        def reset_button_event():
+            global sizeBox, font2, numBoxesX, numBoxesY, advancedRandom, ai, loopBack
             sizeBox = 160
             font2 = pygame.font.Font('freesansbold.ttf', int(sizeBox/2-5))
             numBoxesX = 4
             numBoxesY = 4
             advancedRandom = False
-            waterfall = False
             ai = False
             loopBack = False
+            aiOption = "None"
             expandArray()
-        elif c.lower() == "q":
-            quitSet = True
-            print(bcolors.OKBLUE + "Quiting...")
-            initDisplay()
-            resizeDisplay()
-            initDisplay()
-        else:
-            print(LINE_UP + LINE_UP, end=LINE_CLEAR)
-            noPress = True
-        pygame.display.update()
+            update_box_size(sizeBox)
+            update_x(numBoxesX)
+            update_y(numBoxesY)
+            switch_var_loopBack.set(loopBack)
+            self.aiOptions.set(aiOption)
+        
+        self.resetButton = customtkinter.CTkButton(self.uFrame, text= "Reset Settings", command=reset_button_event, font=self.font)
+        self.resetButton.grid(row=0,column=1,sticky="w",padx=20, pady=20)
+
+        def exit_button_event():
+            self.destroy()
+        
+        self.exitButton = customtkinter.CTkButton(self.uFrame,text="Save and Exit",command=exit_button_event, font=self.font)
+        self.exitButton.grid(row=0,column=2,sticky="w",padx=20, pady=20)
+
+        update_box_size(sizeBox)
+        update_x(numBoxesX)
+        update_y(numBoxesY)
+        switch_var_loopBack.set(loopBack)
+        self.aiOptions.set(aiOption)
+
+
+    
+    
+
+def settingConfig():
+    settings = Settings()
+    settings.mainloop()
+    #font2 = pygame.font.Font('freesansbold.ttf', int(sizeBox/2-5))
+    expandArray()
+    resizeDisplay()
+    gameDisplay.fill(background)
+    renderGame()
+    pygame.display.update()
 
 ## Actual game functionality
 def checkSqaures(velX, velY):
@@ -457,7 +453,7 @@ def checkSqaures(velX, velY):
     deployed = False
     if prevList == valList:
         deployed = True
-        if waterfall:
+        if aiOption == "Waterfall":
             deployed = False
     maxScore = max(map(max, valList))
     if maxScore == 11:
@@ -486,15 +482,29 @@ def checkSqaures(velX, velY):
         if i > numBoxesY * numBoxesX * 10:
             deployed = True
     renderGame()
-
-resizeDisplay()
-initDisplay()
+count = 0
+def calcMove():
+    global count
+    if count == 0:
+        checkSqaures(0,1)
+        count = 1
+    elif count == 1:
+        checkSqaures(1,0)
+        count = 2
+    elif count == 2:
+        checkSqaures(0,-1)
+        count = 3
+    elif count == 3:
+        checkSqaures(-1,0)
+        count = 0
 
 def genFirst():
     x = round(random.random() * numBoxesX) - 1
     y = round(random.random() * numBoxesY) - 1
     valList[x][y] = 1
 
+resizeDisplay()
+gameDisplay.fill(background)
 genFirst()
 renderGame()
 while not crashed:
@@ -518,8 +528,7 @@ while not crashed:
                 else:
                     pygame.display.set_mode((0,0),pygame.FULLSCREEN)
                     fullscreen = True
-
-                initDisplay()
+                renderGame()
             elif event.key == pygame.K_RETURN:
                 settingConfig()
             elif event.key == pygame.K_r:
@@ -528,7 +537,9 @@ while not crashed:
                 pygame.quit()
         elif event.type == pygame.VIDEORESIZE:
             resX, resY = pygame.display.get_window_size()
-            initDisplay()
-    if waterfall:
+            renderGame()
+    if aiOption == "Waterfall":
         checkSqaures(0,1)
+    elif aiOption == "Smart":
+        calcMove()
     pygame.display.update()
